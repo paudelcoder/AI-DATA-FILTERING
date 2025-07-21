@@ -13,28 +13,41 @@ NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "password"
 
-nlp = SanskritNLP()
-graph = KnowledgeGraph(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+def create_app(nlp_client=None, graph_driver=None):
+    app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        text = request.form['text']
-        entities = nlp.analyze_text(text)
-        for entity in entities:
-            graph.add_entity(entity)
-        return redirect(url_for('index'))
-    return render_template('index.html')
+    if graph_driver:
+        graph = KnowledgeGraph(driver=graph_driver)
+    else:
+        graph = KnowledgeGraph(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
 
-@app.route('/graph_data')
-def graph_data():
-    with graph._driver.session() as session:
-        result = session.run("MATCH (n) RETURN n.name AS id, n.type AS group")
-        nodes = [dict(record) for record in result]
+    nlp = SanskritNLP(client=nlp_client)
 
-        result = session.run("MATCH (n)-[r]->(m) RETURN n.name AS source, m.name AS target, r.salience AS value")
-        links = [dict(record) for record in result]
-    return jsonify({"nodes": nodes, "links": links})
+    @app.route('/', methods=['GET', 'POST'])
+    def index():
+        if request.method == 'POST':
+            text = request.form['text']
+            entities = nlp.analyze_text(text)
+            for entity in entities:
+                graph.add_entity(entity)
+            return redirect(url_for('index'))
+        return render_template('index.html')
+
+    @app.route('/graph_data')
+    def graph_data():
+        with graph._driver.session() as session:
+            result = session.run("MATCH (n) RETURN n.name AS id, n.type AS group")
+            nodes = [dict(record) for record in result]
+
+            result = session.run("MATCH (n)-[r]->(m) RETURN n.name AS source, m.name AS target, r.salience AS value")
+            links = [dict(record) for record in result]
+        return jsonify({"nodes": nodes, "links": links})
+
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,5 +1,6 @@
 import spacy
 from collections import Counter
+import re
 
 class HinduismAI:
     def __init__(self):
@@ -113,7 +114,7 @@ def main_cli():
             try:
                 response = requests.get(url)
                 response.raise_for_status()
-                text = BeautifulSoup(response.text, 'html.parser').get_text()
+                text = BeautifulSoup(response.text, 'html.parser').get_text(separator='\n')
 
                 source_id = db_manager.add_source(url, title)
                 doc = ai.load_text(text)

@@ -1,0 +1,7 @@
+spacy<4.0.0,>=3.0.0
+requests
+beautifulsoup4
+google-cloud-language
+neo4j
+flask
+pytest

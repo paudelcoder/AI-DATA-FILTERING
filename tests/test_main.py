@@ -1,41 +1,41 @@
 import unittest
-import os
+from unittest.mock import patch, MagicMock
 from hinduism_ai.main import HinduismAI, DatabaseManager
-import spacy
 
-class TestIntegration(unittest.TestCase):
+class TestHinduismAI(unittest.TestCase):
 
     def setUp(self):
-        self.db_name = "test_hinduism_data.db"
         self.ai = HinduismAI()
-        self.db_manager = DatabaseManager(db_name=self.db_name)
-        self.nlp = spacy.load("en_core_web_sm")
-        self.sample_text = """
-1. The Upanishads are a collection of texts.
-2. They discuss concepts like Brahman and Atman.
-The Bhagavad Gita is another key text.
-        """
-        self.doc = self.nlp(self.sample_text)
+        self.db_manager = DatabaseManager(db_name=":memory:")
 
-    def tearDown(self):
-        os.remove(self.db_name)
+    def test_extract_verses(self):
+        text = "1. This is a verse.\n2. This is another verse."
+        doc = self.ai.load_text(text)
+        verses = self.ai.extract_verses(doc)
+        self.assertEqual(len(verses), 2)
+        self.assertEqual(verses[0], "1. This is a verse.")
 
-    def test_full_pipeline(self):
-        # 1. Add a source
-        source_id = self.db_manager.add_source("http://example.com", "Test Text")
-        self.assertIsNotNone(source_id)
+    def test_extract_concepts(self):
+        text = "This sentence talks about Brahman. This one talks about Atman."
+        doc = self.ai.load_text(text)
+        concepts = self.ai.extract_concepts(doc, ["Brahman", "Atman"])
+        self.assertEqual(len(concepts), 2)
 
-        # 2. Extract and store verses
-        verses = self.ai.extract_verses(self.doc)
-        self.db_manager.add_verses(source_id, verses)
-        stored_verses = self.db_manager.conn.execute("SELECT * FROM verses WHERE source_id = ?", (source_id,)).fetchall()
-        self.assertEqual(len(stored_verses), 2)
+    @patch('hinduism_ai.main.requests.get')
+    def test_main_cli_scrape(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.text = "<html><body><h1>Test Title</h1><p>1. A verse.\n</p><p>A concept about Brahman.</p></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
 
-        # 3. Extract and store concepts
-        concepts = self.ai.extract_concepts(self.doc, ["Brahman", "Atman"])
-        self.db_manager.add_concepts(source_id, concepts)
-        stored_concepts = self.db_manager.conn.execute("SELECT * FROM concepts WHERE source_id = ?", (source_id,)).fetchall()
-        self.assertEqual(len(stored_concepts), 1)
+        with patch('builtins.input', side_effect=['1', 'http://test.com', 'Test Title', 'Brahman', '5']):
+            with patch('hinduism_ai.main.DatabaseManager') as mock_db_manager:
+                instance = mock_db_manager.return_value
+                instance.add_source.return_value = 1
+                from hinduism_ai.main import main_cli
+                main_cli()
+                instance.add_verses.assert_called_once()
+                instance.add_concepts.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

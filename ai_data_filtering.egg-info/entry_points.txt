@@ -1,0 +1,2 @@
+[console_scripts]
+hinduism-ai = hinduism_ai.main:main_cli

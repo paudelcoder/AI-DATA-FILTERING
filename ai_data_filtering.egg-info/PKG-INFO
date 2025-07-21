@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: ai_data_filtering
+Version: 0.1.0
+Requires-Dist: spacy<4.0.0,>=3.0.0
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Requires-Dist: google-cloud-language
+Requires-Dist: neo4j
+Requires-Dist: flask
+Requires-Dist: pytest
+Dynamic: requires-dist

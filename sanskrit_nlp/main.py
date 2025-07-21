@@ -2,8 +2,8 @@ from google.cloud import language_v1
 from neo4j import GraphDatabase
 
 class SanskritNLP:
-    def __init__(self):
-        self.client = language_v1.LanguageServiceClient()
+    def __init__(self, client=None):
+        self.client = client or language_v1.LanguageServiceClient()
 
     def analyze_text(self, text):
         document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
@@ -11,8 +11,11 @@ class SanskritNLP:
         return response.entities
 
 class KnowledgeGraph:
-    def __init__(self, uri, user, password):
-        self._driver = GraphDatabase.driver(uri, auth=(user, password))
+    def __init__(self, uri=None, user=None, password=None, driver=None):
+        if driver:
+            self._driver = driver
+        else:
+            self._driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def close(self):
         self._driver.close()

@@ -1,0 +1,10 @@
+README.md
+setup.py
+ai_data_filtering.egg-info/PKG-INFO
+ai_data_filtering.egg-info/SOURCES.txt
+ai_data_filtering.egg-info/dependency_links.txt
+ai_data_filtering.egg-info/entry_points.txt
+ai_data_filtering.egg-info/requires.txt
+ai_data_filtering.egg-info/top_level.txt
+tests/test_main.py
+tests/test_web_interface.py
