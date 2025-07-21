@@ -1,38 +1,41 @@
 import unittest
-from hinduism_ai.main import HinduismAI
+import os
+from hinduism_ai.main import HinduismAI, DatabaseManager
 import spacy
 
-class TestHinduismAI(unittest.TestCase):
+class TestIntegration(unittest.TestCase):
 
     def setUp(self):
+        self.db_name = "test_hinduism_data.db"
         self.ai = HinduismAI()
+        self.db_manager = DatabaseManager(db_name=self.db_name)
         self.nlp = spacy.load("en_core_web_sm")
         self.sample_text = """
-        The Upanishads are a collection of texts that contain some of the central philosophical concepts of Hinduism.
-        They are considered by Hindus to contain revealed truths (Sruti) concerning the nature of ultimate reality (brahman) and describing the character and form of human salvation (moksha).
-        The Bhagavad Gita is a 700-verse Hindu scripture that is part of the Hindu epic Mahabharata.
+1. The Upanishads are a collection of texts.
+2. They discuss concepts like Brahman and Atman.
+The Bhagavad Gita is another key text.
         """
         self.doc = self.nlp(self.sample_text)
 
-    def test_filter_content(self):
-        filtered = self.ai.filter_content(self.doc, ["Upanishads", "Gita"])
-        self.assertEqual(len(filtered), 2)
-        self.assertIn("Upanishads", filtered[0])
-        self.assertIn("Gita", filtered[1])
+    def tearDown(self):
+        os.remove(self.db_name)
 
-    def test_save_and_get_data(self):
-        filtered = self.ai.filter_content(self.doc, ["Hinduism"])
-        self.ai.save_data(filtered)
-        saved_data = self.ai.get_saved_data()
-        self.assertEqual(len(saved_data), 1)
-        self.assertIn("Hinduism", saved_data[0])
+    def test_full_pipeline(self):
+        # 1. Add a source
+        source_id = self.db_manager.add_source("http://example.com", "Test Text")
+        self.assertIsNotNone(source_id)
 
-    def test_get_common_words(self):
-        filtered = self.ai.filter_content(self.doc, ["the"])
-        self.ai.save_data(filtered)
-        common_words = self.ai.get_common_words(5)
-        # Expected result may vary based on tokenization, but 'the' should be prominent
-        self.assertIn('the', [word[0].lower() for word in common_words])
+        # 2. Extract and store verses
+        verses = self.ai.extract_verses(self.doc)
+        self.db_manager.add_verses(source_id, verses)
+        stored_verses = self.db_manager.conn.execute("SELECT * FROM verses WHERE source_id = ?", (source_id,)).fetchall()
+        self.assertEqual(len(stored_verses), 2)
+
+        # 3. Extract and store concepts
+        concepts = self.ai.extract_concepts(self.doc, ["Brahman", "Atman"])
+        self.db_manager.add_concepts(source_id, concepts)
+        stored_concepts = self.db_manager.conn.execute("SELECT * FROM concepts WHERE source_id = ?", (source_id,)).fetchall()
+        self.assertEqual(len(stored_concepts), 1)
 
 if __name__ == '__main__':
     unittest.main()
