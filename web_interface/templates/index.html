@@ -6,8 +6,23 @@
     <title>Hinduism AI</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-      .node { stroke: #fff; stroke-width: 1.5px; }
+      #graph-container { display: flex; }
+      #graph { width: 70%; }
+      #info-panel { width: 30%; padding-left: 20px; }
+      .node { stroke: #fff; stroke-width: 1.5px; cursor: pointer; }
       .link { stroke: #999; stroke-opacity: 0.6; }
+      .tooltip {
+        position: absolute;
+        text-align: center;
+        width: 120px;
+        height: auto;
+        padding: 2px;
+        font: 12px sans-serif;
+        background: lightsteelblue;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -19,19 +34,36 @@
         <br>
         <button type="submit">Analyze and Add to Graph</button>
       </form>
-      <div id="graph"></div>
+      <div class="controls">
+        <input type="text" id="search" placeholder="Search for a node...">
+        <button id="search-btn">Search</button>
+      </div>
+      <div id="graph-container">
+      <div id="graph-container">
+      <div id="graph-container">
+        <div id="graph"></div>
+        <div id="info-panel"></div>
+      </div>
+        <div id="info-panel"></div>
+      </div>
+        <div id="info-panel"></div>
+      </div>
+      <div class="tooltip" style="opacity:0;"></div>
     </div>
     <script>
       const width = 960;
       const height = 600;
+      const color = d3.scaleOrdinal(d3.schemeCategory10);
 
       const svg = d3.select("#graph").append("svg")
           .attr("width", width)
           .attr("height", height);
 
+      const tooltip = d3.select(".tooltip");
+
       const simulation = d3.forceSimulation()
-          .force("link", d3.forceLink().id(d => d.id))
-          .force("charge", d3.forceManyBody())
+          .force("link", d3.forceLink().id(d => d.id).distance(100))
+          .force("charge", d3.forceManyBody().strength(-100))
           .force("center", d3.forceCenter(width / 2, height / 2));
 
       d3.json("/graph_data").then(function(graph) {
@@ -40,7 +72,8 @@
           .selectAll("line")
           .data(graph.links)
           .enter().append("line")
-            .attr("class", "link");
+            .attr("class", "link")
+            .style("stroke-width", d => Math.sqrt(d.value));
 
         const node = svg.append("g")
             .attr("class", "nodes")
@@ -48,7 +81,20 @@
           .data(graph.nodes)
           .enter().append("circle")
             .attr("class", "node")
-            .attr("r", 5)
+            .attr("r", 10)
+            .attr("fill", d => color(d.group))
+            .on("mouseover", (event, d) => {
+              tooltip.transition().duration(200).style("opacity", .9);
+              tooltip.html(`ID: ${d.id}<br/>Group: ${d.group}`)
+                     .style("left", (event.pageX + 5) + "px")
+                     .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", () => {
+              tooltip.transition().duration(500).style("opacity", 0);
+            })
+            .on("click", (event, d) => {
+              d3.select("#info-panel").html(`<h3>${d.id}</h3><p>Group: ${d.group}</p>`);
+            })
             .call(d3.drag()
                 .on("start", dragstarted)
                 .on("drag", dragged)
@@ -93,6 +139,12 @@
         event.subject.fx = null;
         event.subject.fy = null;
       }
+
+      d3.select("#search-btn").on("click", function() {
+        const searchTerm = d3.select("#search").property("value");
+        node.style("opacity", d => d.id.includes(searchTerm) ? 1 : 0.1);
+        link.style("opacity", d => d.source.id.includes(searchTerm) || d.target.id.includes(searchTerm) ? 1 : 0.1);
+      });
     </script>
   </body>
 </html>

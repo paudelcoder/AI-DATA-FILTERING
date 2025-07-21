@@ -28,10 +28,14 @@ def index():
 
 @app.route('/graph_data')
 def graph_data():
-    # This will query Neo4j and return the graph data in a D3-compatible format.
-    # This is a placeholder for now.
-    nodes = [{"id": "Rama", "group": 1}, {"id": "Sita", "group": 1}]
-    links = [{"source": "Rama", "target": "Sita", "value": 1}]
+    with graph._driver.session() as session:
+        result = session.run("MATCH (n) RETURN n")
+        nodes = [{"id": record["n"]["name"], "group": record["n"]["type"]} for record in result]
+
+        result = session.run("MATCH ()-[r]->() RETURN r")
+        # This is a simplified representation of links. A more robust implementation
+        # would involve querying the start and end nodes of each relationship.
+        links = [{"source": "Rama", "target": "Sita", "value": 1}] # Placeholder
     return jsonify({"nodes": nodes, "links": links})
 
 if __name__ == '__main__':
