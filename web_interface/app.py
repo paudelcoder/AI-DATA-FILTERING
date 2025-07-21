@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import sys
 import os
 
@@ -25,6 +25,14 @@ def index():
             graph.add_entity(entity)
         return redirect(url_for('index'))
     return render_template('index.html')
+
+@app.route('/graph_data')
+def graph_data():
+    # This will query Neo4j and return the graph data in a D3-compatible format.
+    # This is a placeholder for now.
+    nodes = [{"id": "Rama", "group": 1}, {"id": "Sita", "group": 1}]
+    links = [{"source": "Rama", "target": "Sita", "value": 1}]
+    return jsonify({"nodes": nodes, "links": links})
 
 if __name__ == '__main__':
     app.run(debug=True)
